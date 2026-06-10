@@ -1,0 +1,43 @@
+{
+  "schema": "pcap_risk_scorer.ioc/v1",
+  "source": "abuse.ch URLhaus, SSLBL, ThreatFox (тестова вибірка)",
+  "updated": "2026-05-24",
+  "indicators": [
+    {
+      "type": "ip",
+      "value": "203.0.113.66",
+      "tags": ["c2", "cobalt-strike"],
+      "first_seen": "2025-11-15"
+    },
+    {
+      "type": "ip",
+      "value": "198.51.100.42",
+      "tags": ["c2", "sliver", "apt28"],
+      "first_seen": "2025-10-20"
+    },
+    {
+      "type": "ip",
+      "value": "192.0.2.99",
+      "tags": ["malware-distribution", "trickbot"],
+      "first_seen": "2025-12-01"
+    },
+    {
+      "type": "domain",
+      "value": "tunnel.attacker.com",
+      "tags": ["dns-tunnel", "iodine"],
+      "first_seen": "2025-08-12"
+    },
+    {
+      "type": "domain",
+      "value": "c2.malware-test.local",
+      "tags": ["c2", "beacon"],
+      "first_seen": "2025-09-30"
+    },
+    {
+      "type": "domain",
+      "value": "exfil-server.net",
+      "tags": ["data-exfiltration"],
+      "first_seen": "2026-01-10"
+    }
+  ]
+}

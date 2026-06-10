@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>PcapRiskScorer — звіт про аналіз {{ pcap_name }}</title>
+<style>
+:root {
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #dee2e6;
+    --text: #212529;
+    --muted: #6c757d;
+    --accent: #0c447c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 24px;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+header { margin-bottom: 24px; }
+header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+}
+header .subtitle { color: var(--muted); font-size: 14px; }
+.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+.card h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text);
+}
+.card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    color: var(--accent);
+}
+.summary-grid {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 24px;
+    align-items: center;
+}
+.score-circle {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: conic-gradient({{ score.risk_color }} 0% {{ score.risk_score }}%, #e9ecef {{ score.risk_score }}% 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 0 auto;
+}
+.score-circle::before {
+    content: "";
+    position: absolute;
+    width: 160px;
+    height: 160px;
+    background: var(--card);
+    border-radius: 50%;
+}
+.score-inner {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+}
+.score-value {
+    font-size: 56px;
+    font-weight: 700;
+    color: {{ score.risk_color }};
+    line-height: 1;
+}
+.score-label {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.verdict {
+    font-size: 24px;
+    font-weight: 600;
+    color: {{ score.risk_color }};
+    margin-bottom: 8px;
+}
+.verdict-text { color: var(--muted); }
+.meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 16px;
+}
+.meta-item {
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+.meta-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+.meta-value {
+    font-size: 16px;
+    font-weight: 600;
+}
+table { width: 100%; border-collapse: collapse; }
+th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    vertical-align: top;
+}
+th {
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--bg);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+}
+tr:last-child td { border-bottom: none; }
+.suspicion-bar {
+    display: inline-block;
+    width: 110px;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 8px;
+}
+.suspicion-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 4px;
+}
+.s-low { background: #28a745; }
+.s-med { background: #f0b429; }
+.s-high { background: #dc3545; }
+.finding-block {
+    background: var(--bg);
+    padding: 14px 16px;
+    border-radius: 6px;
+    margin-top: 12px;
+    border-left: 3px solid var(--accent);
+}
+.finding-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.finding-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 13px;
+}
+.finding-key {
+    color: var(--muted);
+    font-weight: 500;
+}
+.finding-value {
+    color: var(--text);
+    font-family: "Menlo", "Consolas", monospace;
+    word-break: break-all;
+}
+.detector-summary {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+    margin-bottom: 12px;
+}
+.tag {
+    display: inline-block;
+    background: #fee;
+    color: #c33;
+    padding: 1px 7px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: "Menlo", "Consolas", monospace;
+    margin-right: 4px;
+}
+.examples-list {
+    font-family: "Menlo", "Consolas", monospace;
+    font-size: 12px;
+    padding-left: 20px;
+    margin-top: 6px;
+}
+.examples-list li {
+    margin-bottom: 3px;
+    color: #495057;
+    word-break: break-all;
+}
+.chart-container {
+    position: relative;
+    height: 240px;
+    margin-top: 12px;
+}
+.chart-wide {
+    height: 280px;
+}
+.actions {
+    background: #fff3cd;
+    border-left: 4px solid #f0b429;
+    padding: 16px 20px;
+    border-radius: 6px;
+    margin-top: 12px;
+}
+.actions h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #856404;
+    margin-top: 0;
+}
+.actions ul { margin-left: 20px; color: #495057; font-size: 14px; }
+.actions li { margin-bottom: 4px; }
+footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+footer .author {
+    font-weight: 600;
+    color: var(--text);
+}
+@media print {
+    body { background: white; padding: 0; }
+    .card { box-shadow: none; page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>PcapRiskScorer</h1>
+<div class="subtitle">Автоматизований аналіз pcap-файла: <strong>{{ pcap_name }}</strong> · {{ generated_at }}</div>
+</header>
+
+<!-- Виконавче резюме -->
+<div class="card">
+<div class="summary-grid">
+<div class="score-circle">
+<div class="score-inner">
+<div class="score-value">{{ score.risk_score }}</div>
+<div class="score-label">з 100</div>
+</div>
+</div>
+<div>
+<div class="verdict">Рівень ризику: {{ score.risk_level }}</div>
+<div class="verdict-text">{{ verdict_text }}</div>
+<div class="meta-grid">
+<div class="meta-item">
+<div class="meta-label">Пакетів</div>
+<div class="meta-value">{{ pcap_stats.total_packets }}</div>
+</div>
+<div class="meta-item">
+<div class="meta-label">Тривалість</div>
+<div class="meta-value">{{ pcap_stats.duration_seconds }} с</div>
+</div>
+<div class="meta-item">
+<div class="meta-label">Унікальних IP</div>
+<div class="meta-value">{{ pcap_stats.unique_src_ips + pcap_stats.unique_dst_ips }}</div>
+</div>
+<div class="meta-item">
+<div class="meta-label">Backend</div>
+<div class="meta-value">{{ pcap_stats.backend }}</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Загальна статистика pcap -->
+<div class="card">
+<h2>Загальна статистика pcap</h2>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+<div>
+<h3>Розподіл протоколів</h3>
+<div class="chart-container">{{ protocol_svg|safe }}</div>
+</div>
+<div>
+<h3>Активність трафіку у часі</h3>
+<div class="chart-container">{{ timeline_svg|safe }}</div>
+</div>
+</div>
+</div>
+
+<!-- Топ-10 розмовників -->
+{% if pcap_stats.top_talkers %}
+<div class="card">
+<h2>Топ-10 розмовників (за обсягом обміну)</h2>
+<table>
+<thead><tr><th>#</th><th>Джерело</th><th>Призначення</th><th>Обсяг</th></tr></thead>
+<tbody>
+{% for t in pcap_stats.top_talkers %}
+<tr>
+<td>{{ loop.index }}</td>
+<td><code>{{ t.src }}</code></td>
+<td><code>{{ t.dst }}</code></td>
+<td>{{ t.mb }} МБ</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% endif %}
+
+<!-- Результати по детекторах -->
+<div class="card">
+<h2>Результати по детекторах</h2>
+<table>
+<thead>
+<tr>
+<th style="width:30%">Детектор</th>
+<th style="width:8%">Вага</th>
+<th style="width:25%">Підозра</th>
+<th style="width:37%">Висновок</th>
+</tr>
+</thead>
+<tbody>
+{% for d in score.detector_results %}
+<tr>
+<td><strong>{{ d.name }}</strong></td>
+<td>{{ "%.1f"|format(d.weight) }}</td>
+<td>
+<span class="suspicion-bar"><span class="{% if d.suspicion >= 0.7 %}s-high{% elif d.suspicion >= 0.4 %}s-med{% else %}s-low{% endif %}" style="width: {{ (d.suspicion * 100)|round|int }}%"></span></span>
+{{ "%.2f"|format(d.suspicion) }}
+</td>
+<td><span class="detector-summary" style="margin: 0">{{ d.summary }}</span></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<!-- Деталі по кожному детектору -->
+{% for d in score.detector_results %}
+{% if d.findings %}
+<div class="card">
+<h2>{{ d.name }} — деталі</h2>
+<div class="detector-summary">{{ d.summary }}</div>
+
+{% for f in d.findings %}
+<div class="finding-block">
+
+{# Port Scan #}
+{% if "сканування" in d.name.lower() %}
+<div class="finding-title">⚠ Сканер: <code>{{ f.src_ip }}</code></div>
+<div class="finding-row"><div class="finding-key">Усього портів:</div><div class="finding-value">{{ f.ports_scanned }}</div></div>
+<div class="finding-row"><div class="finding-key">Цільових хостів:</div><div class="finding-value">{{ f.targets_total }}</div></div>
+<div class="finding-row"><div class="finding-key">SYN-пакетів:</div><div class="finding-value">{{ f.syn_packets }}</div></div>
+<div class="finding-row"><div class="finding-key">Рівень підозри:</div><div class="finding-value">{{ f.level }}</div></div>
+{% if f.target_details %}
+<h3 style="margin-top:12px">Цільові хости:</h3>
+{% for t in f.target_details %}
+<div class="finding-row"><div class="finding-key">→ {{ t.dst_ip }}</div><div class="finding-value">{{ t.ports_count }} портів ({{ t.port_range }}){% if t.duration_s %}, за {{ t.duration_s }}с{% endif %}</div></div>
+{% endfor %}
+{% endif %}
+
+{# ARP #}
+{% elif "ARP" in d.name %}
+<div class="finding-title">⚠ Конфлікт MAC для IP <code>{{ f.ip }}</code></div>
+<div class="finding-row"><div class="finding-key">Унікальних MAC:</div><div class="finding-value">{{ f.mac_count }}</div></div>
+<div class="finding-row"><div class="finding-key">Переключень:</div><div class="finding-value">{{ f.switches }}</div></div>
+<div class="finding-row"><div class="finding-key">Всього ARP-replies:</div><div class="finding-value">{{ f.arp_replies_total }}</div></div>
+<h3 style="margin-top:12px">MAC-адреси:</h3>
+{% for m in f.macs %}
+<div class="finding-row"><div class="finding-key">{{ m.mac }}</div><div class="finding-value">{{ m.arp_replies }} replies</div></div>
+{% endfor %}
+
+{# DNS Tunneling #}
+{% elif "DNS" in d.name %}
+<div class="finding-title">⚠ Підозрілий DNS-трафік з <code>{{ f.src_ip }}</code></div>
+<div class="finding-row"><div class="finding-key">Всього DNS-запитів:</div><div class="finding-value">{{ f.total_dns }}</div></div>
+<div class="finding-row"><div class="finding-key">Довгих імен (>50 симв.):</div><div class="finding-value">{{ f.long_names }}</div></div>
+<div class="finding-row"><div class="finding-key">Високої ентропії:</div><div class="finding-value">{{ f.high_entropy_names }}</div></div>
+<div class="finding-row"><div class="finding-key">TXT/NULL/CNAME:</div><div class="finding-value">{{ f.tunnel_qtype_count }} ({{ f.tunnel_qtype_ratio_pct }}%)</div></div>
+{% if f.top_domains %}
+<h3 style="margin-top:12px">Топ домени:</h3>
+<ul class="examples-list">
+{% for dom in f.top_domains %}<li>{{ dom[0] }} ({{ dom[1] }} запитів)</li>{% endfor %}
+</ul>
+{% endif %}
+{% if f.examples %}
+<h3 style="margin-top:12px">Приклади запитів:</h3>
+<ul class="examples-list">
+{% for ex in f.examples %}<li>{{ ex.qname }} <em>(len={{ ex.length }}, H={{ ex.entropy }}, type={{ ex.qtype }})</em></li>{% endfor %}
+</ul>
+{% endif %}
+
+{# Beaconing #}
+{% elif "біконінг" in d.name.lower() %}
+<div class="finding-title">⚠ C2-канал: <code>{{ f.src_ip }}</code> → <code>{{ f.dst_ip }}:{{ f.dst_port }}</code></div>
+<div class="finding-row"><div class="finding-key">З'єднань:</div><div class="finding-value">{{ f.connections }}</div></div>
+<div class="finding-row"><div class="finding-key">Середній інтервал:</div><div class="finding-value">{{ f.mean_interval_s }}с (мін: {{ f.min_interval_s }}, макс: {{ f.max_interval_s }})</div></div>
+<div class="finding-row"><div class="finding-key">Std-відхилення:</div><div class="finding-value">{{ f.stdev_interval_s }}с</div></div>
+<div class="finding-row"><div class="finding-key">Коефіцієнт варіації (CV):</div><div class="finding-value"><strong>{{ f.cv }}</strong> (поріг 0.3)</div></div>
+<div class="finding-row"><div class="finding-key">Тривалість:</div><div class="finding-value">{{ f.duration_s }}с</div></div>
+
+{# HTTP Exfil #}
+{% elif "ексфільтрація" in d.name.lower() %}
+<div class="finding-title">⚠ Ексфільтрація: <code>{{ f.src_ip }}</code> → <code>{{ f.dst_ip }}</code></div>
+<div class="finding-row"><div class="finding-key">Обсяг вихідних даних:</div><div class="finding-value"><strong>{{ f.bytes_out_mb }} МБ</strong></div></div>
+<div class="finding-row"><div class="finding-key">Тривалість сесії:</div><div class="finding-value">{{ f.duration_s }}с</div></div>
+<div class="finding-row"><div class="finding-key">Швидкість:</div><div class="finding-value">{{ f.throughput_kbps }} kbps</div></div>
+<div class="finding-row"><div class="finding-key">Великих POST (>1МБ):</div><div class="finding-value">{{ f.large_posts_count }}</div></div>
+{% if f.hosts %}
+<div class="finding-row"><div class="finding-key">Hosts:</div><div class="finding-value">{{ f.hosts|join(", ") }}</div></div>
+{% endif %}
+{% if f.post_examples %}
+<h3 style="margin-top:12px">Приклади POST-запитів:</h3>
+<ul class="examples-list">
+{% for p in f.post_examples %}<li>POST {{ p.host }}{{ p.uri }} <em>({{ p.size_mb }} МБ)</em></li>{% endfor %}
+</ul>
+{% endif %}
+
+{# ICMP #}
+{% elif "ICMP" in d.name %}
+<div class="finding-title">⚠ ICMP-аномалія: <code>{{ f.src_ip }}</code> → <code>{{ f.dst_ip }}</code></div>
+<div class="finding-row"><div class="finding-key">Всього ICMP-пакетів:</div><div class="finding-value">{{ f.total_icmp }}</div></div>
+<div class="finding-row"><div class="finding-key">З великим payload:</div><div class="finding-value">{{ f.large_payload_count }}</div></div>
+<div class="finding-row"><div class="finding-key">Середній розмір:</div><div class="finding-value">{{ f.avg_size_b }} B (max {{ f.max_size_b }} B)</div></div>
+{% if f.mean_interval_s %}
+<div class="finding-row"><div class="finding-key">Періодичність:</div><div class="finding-value">{{ f.mean_interval_s }}с (CV={{ f.cv }})</div></div>
+{% endif %}
+<div class="finding-row"><div class="finding-key">Ознаки:</div><div class="finding-value">{{ f.reason }}</div></div>
+
+{# TLS #}
+{% elif "TLS" in d.name %}
+{% if f.type == "known_bad_ja3" %}
+<div class="finding-title">⚠ Відомий JA3 шкідливого ПЗ: <strong>{{ f.framework }}</strong></div>
+<div class="finding-row"><div class="finding-key">JA3 hash:</div><div class="finding-value"><code>{{ f.ja3_hash }}</code></div></div>
+<div class="finding-row"><div class="finding-key">Зафіксовано сесій:</div><div class="finding-value">{{ f.occurrences }}</div></div>
+<div class="finding-row"><div class="finding-key">Джерела:</div><div class="finding-value">{{ f.sources|join(", ") }}</div></div>
+<div class="finding-row"><div class="finding-key">Призначення:</div><div class="finding-value">{{ f.destinations|join(", ") }}</div></div>
+{% else %}
+<div class="finding-title">⚠ DGA-патерни у SNI з хоста <code>{{ f.src_ip }}</code></div>
+<div class="finding-row"><div class="finding-key">Підозрілих доменів:</div><div class="finding-value">{{ f.dga_count }}</div></div>
+<div class="finding-row"><div class="finding-key">Середня ентропія:</div><div class="finding-value">{{ f.avg_entropy }}</div></div>
+{% if f.examples %}
+<h3 style="margin-top:12px">Приклади:</h3>
+<ul class="examples-list">
+{% for ex in f.examples %}<li>{{ ex.sni }} → {{ ex.dst_ip }} <em>(H={{ ex.entropy }})</em></li>{% endfor %}
+</ul>
+{% endif %}
+{% endif %}
+
+{# IoC #}
+{% elif "IoC" in d.name %}
+<div class="finding-title">⚠ Збіг з IoC: <code>{{ f.ioc }}</code> ({{ f.type }})</div>
+<div class="finding-row"><div class="finding-key">Хітів:</div><div class="finding-value">{{ f.hits }}</div></div>
+<div class="finding-row"><div class="finding-key">Перше виявлення (у фіді):</div><div class="finding-value">{{ f.first_seen }}</div></div>
+{% if f.tags %}
+<div class="finding-row"><div class="finding-key">Теги:</div><div class="finding-value">{% for t in f.tags %}<span class="tag">{{ t }}</span>{% endfor %}</div></div>
+{% endif %}
+{% if f.contexts %}
+<h3 style="margin-top:12px">Контексти:</h3>
+<ul class="examples-list">
+{% for c in f.contexts %}
+{% if c.type == "dns_query" %}<li>DNS query: <code>{{ c.qname }}</code> від <code>{{ c.src }}</code></li>
+{% else %}<li>Трафік: <code>{{ c.src }}</code> → <code>{{ c.dst }}</code></li>
+{% endif %}
+{% endfor %}
+</ul>
+{% endif %}
+{% endif %}
+
+</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- Метадані аналізу -->
+<div class="card">
+<h2>Метадані аналізу</h2>
+<table>
+<tr><td>Файл</td><td><code>{{ pcap_stats.file_path }}</code></td></tr>
+<tr><td>Розмір</td><td>{{ (pcap_stats.file_size_bytes / 1024 / 1024)|round(2) }} МБ</td></tr>
+<tr><td>Backend парсингу</td><td>{{ pcap_stats.backend }}</td></tr>
+<tr><td>Час обробки</td><td>{{ pcap_stats.processing_time_seconds }} с</td></tr>
+<tr><td>Сума зважених скорів</td><td>{{ score.sum_weighted }}</td></tr>
+<tr><td>Сума ваг</td><td>{{ score.sum_weights }}</td></tr>
+<tr><td>Формула</td><td><code>R = (Σ wᵢ·Sᵢ · 100) / Σwᵢ</code></td></tr>
+</table>
+</div>
+
+{% if recommendations %}
+<div class="card">
+<h2>Рекомендовані дії</h2>
+<div class="actions">
+<ul>
+{% for r in recommendations %}
+<li>{{ r }}</li>
+{% endfor %}
+</ul>
+</div>
+</div>
+{% endif %}
+
+<footer>
+PcapRiskScorer · Автор: <span class="author">Камінський Валентин</span> · {{ generated_at }}
+</footer>
+</div>
+</body>
+</html>
