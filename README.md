@@ -1,6 +1,6 @@
 # PcapRiskScorer
 
-**Author:** Kaminskyi Valentyn  
+**Author:** vltn
 **Version:** 0.1  
 **License:** MIT | This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
